@@ -95,15 +95,17 @@ int	TcpClient::ConnectServerByAynsc(char *pIp,unsigned short usPort,unsigned int
         //connect
         m_pSocket->async_connect(*m_pEndPoint,boost::bind(&TcpClient::connect_handler,this, boost::asio::placeholders::error));
         //m_pSocket->async_read_some(buffer(m_rbTempRecvBuffer),boost::bind(&TcpClient::async_read_handler, this, boost::asio::placeholders::error,boost::asio::placeholders::bytes_transferred,fnCallback,dwUserData1,dwUserData2));
-        m_pSocket->async_read_some(boost::asio::buffer(this->m_buffer_1, TCP_RECV_DATA_PACKAGE_MAX_LENGTH),
-                               boost::bind(&TcpClient::on_message_arrival,
-                               this,
-                               boost::asio::placeholders::error,
-                               boost::asio::placeholders::bytes_transferred));
+//        m_pSocket->async_read_some(boost::asio::buffer(this->m_buffer_1, TCP_RECV_DATA_PACKAGE_MAX_LENGTH),
+//                               boost::bind(&TcpClient::on_message_arrival,
+//                               this,
+//                               boost::asio::placeholders::error,
+//                               boost::asio::placeholders::bytes_transferred));
     }
     catch (std::exception& e)
     {
-        std::cout << e.what() << std::endl;
+        std::cout <<"throw a error"<< e.what() << std::endl;
+        sleep(1);
+        ConnectServerByAynsc(pIp,usPort,uiConnectTimeout,uiReconnectInteralTime);
         return -2;
     }
 
@@ -273,8 +275,15 @@ int		TcpClient::RecvDataByAynsc(TcpRecvDataCallback fnCallback,DWORD dwUserData1
 }
 
 void TcpClient::RunAynsc()
-{
-    m_io.run();
+{    
+    try {
+        boost::asio::io_service::work work(m_io);
+        m_io.run();
+    } catch (std::exception& e) {
+        cout<<"RunAynsc error"<<endl;
+        return ;
+    }
+
 }
 
 //设置阻塞与非阻塞
