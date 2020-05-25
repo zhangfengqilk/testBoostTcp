@@ -7,6 +7,8 @@
 #include <boost/array.hpp>
 #include <boost/typeof/typeof.hpp>
 
+#include <boost/signals2.hpp>
+#include <boost/function.hpp>
 #include <iostream>
 #include <vector>
 #include <string>
@@ -80,6 +82,20 @@ public:
     int		RecvDataByAynsc(TcpRecvDataCallback fnCallback,DWORD dwUserData1,DWORD dwUserData2);
     void RunAynsc();
 
+
+public:
+    //typedef 信号
+    typedef boost::signals2::signal<void(const boost::system::error_code&,char*,int)> defSignal;
+    typedef typename defSignal::slot_type defSlot;
+    //连接槽函数
+    boost::signals2::connection connectFun(const defSlot& slot){
+         return mSignal.connect(slot);
+    }
+    void test(){
+        //mSignal(10,20);
+    }
+private:
+        defSignal mSignal;
 protected:
     void connect_handler(const boost::system::error_code& ec);
     void async_read_handler(const boost::system::error_code& ec,size_t bytes_transferred,TcpRecvDataCallback fnCallback,DWORD dwUserData1,DWORD dwUserData2);

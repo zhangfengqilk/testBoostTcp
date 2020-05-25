@@ -103,31 +103,33 @@ int	TcpClient::ConnectServerByAynsc(char *pIp,unsigned short usPort,unsigned int
     }
     catch (std::exception& e)
     {
-        std::cout << e.what() << std::endl;
+        std::cout <<"throw a error"<< e.what() << std::endl;
+        sleep(1);
+        ConnectServerByAynsc(pIp,usPort,uiConnectTimeout,uiReconnectInteralTime);
         return -2;
     }
 
     return 0;
 }
     // 收到远程返回的消息后, 此事件方法将被调用。
-    void TcpClient::on_message_arrival(const boost::system::error_code& error, size_t size)
-    {
-        if ( error ) {
-            cout<<"error: receive message failed, "<<error<<endl;
-            return ;
-        }
-
-        // 命令消息发送成功后，立即准备收消息，消息收到后，触发on_message_arrival消息执行
-        m_pSocket->async_read_some(boost::asio::buffer(this->m_buffer_1, TCP_RECV_DATA_PACKAGE_MAX_LENGTH),
-                               boost::bind(&TcpClient::on_message_arrival,
-                               this,
-                               boost::asio::placeholders::error,
-                               boost::asio::placeholders::bytes_transferred));
-        // 参数size表示收到的字节数，收到的消息位于m_buffer_1
-        m_buffer_1[size] = '\0';
-        cout<<m_buffer_1<<endl;
-        //cout<<m_status<<endl;
+void TcpClient::on_message_arrival(const boost::system::error_code& error, size_t size)
+{
+    if ( error ) {
+        cout<<"error: receive message failed, "<<error<<endl;
+        return ;
     }
+    this->mSignal(error,m_buffer_1,size);
+    // 命令消息发送成功后，立即准备收消息，消息收到后，触发on_message_arrival消息执行
+    m_pSocket->async_read_some(boost::asio::buffer(this->m_buffer_1, TCP_RECV_DATA_PACKAGE_MAX_LENGTH),
+                           boost::bind(&TcpClient::on_message_arrival,
+                           this,
+                           boost::asio::placeholders::error,
+                           boost::asio::placeholders::bytes_transferred));
+    // 参数size表示收到的字节数，收到的消息位于m_buffer_1
+    m_buffer_1[size] = '\0';
+    cout<<m_buffer_1<<endl;
+    //cout<<m_status<<endl;
+}
 void TcpClient::connect_handler(const boost::system::error_code& ec)
 {
     if (ec)
@@ -146,6 +148,7 @@ void TcpClient::async_read_handler(const boost::system::error_code& ec,size_t by
         fnCallback(ec,m_rbTempRecvBuffer.data(),bytes_transferred,dwUserData1,dwUserData2);
     }
 
+    this->mSignal(ec,m_rbTempRecvBuffer.data(),bytes_transferred);
     if(ec == boost::asio::error::eof)
     {
         //对端方关闭连接
@@ -273,8 +276,15 @@ int		TcpClient::RecvDataByAynsc(TcpRecvDataCallback fnCallback,DWORD dwUserData1
 }
 
 void TcpClient::RunAynsc()
-{
-    m_io.run();
+{    
+    try {
+        boost::asio::io_service::work work(m_io);
+        m_io.run();
+    } catch (std::exception& e) {
+        cout<<"RunAynsc error"<<endl;
+        return ;
+    }
+
 }
 
 //设置阻塞与非阻塞
